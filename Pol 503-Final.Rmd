@@ -1,0 +1,60 @@
+
+
+---
+title: "Analysis of Democratic Aid Data"
+author: "Rafeel Wasif"
+date: "Monday, June 01, 2015"
+output: html_document
+---
+
+In this project I clean democratic aid data to see whether aid to promote democratic projects is impacted by the political system of the donor, and whether it is democratic or not.
+
+
+```{r, warning=FALSE}
+
+library(foreign)
+library(dplyr)
+library(ggplot2)
+library(stargazer)
+
+
+setwd("C:/Users/Rafeel/OneDrive/Documents/R-Work/Final Project")
+mydata <- read.dta("Final_Data.dta") 
+
+```
+
+Cleaning Data and Running regression of donor democratic aid against donor democracy.
+
+
+```{r, echo=FALSE}
+
+mydata$donor_democracy<-factor(mydata$donor_democracy)
+
+regression <- lm(perc_democratic_aid ~ donor_democracy  + flow1 + flow2 + coldwar + s3un + donor_cgdp_n + recipient_democracy + recipient_cgdp_n, data = mydata)
+
+summary(regression)
+newest_data <- data.frame(donor_democracy = factor(c(0,5,7,8,9,10)),recipient_democracy = mean(mydata$recipient_democracy, na.rm = TRUE), s3un = mean(mydata$s3un, na.rm = TRUE), flow1 = mean(mydata$flow1, na.rm = TRUE), flow2 = mean(mydata$flow2, na.rm = TRUE), coldwar = mean(mydata$coldwar, na.rm = TRUE), donor_cgdp_n = mean(mydata$donor_cgdp_n, na.rm = TRUE), recipient_cgdp_n = mean(mydata$recipient_cgdp_n, na.rm= TRUE)) 
+
+predict_vals <- predict(regression,newest_data, se = TRUE)
+predict_data<-data.frame(cbind(predict_vals, newest_data))
+
+ggplot(predict_data, aes(x = donor_democracy, y = fit,
+                         min=(fit-(se.fit*1.96)), max=(fit+(se.fit*1.96)))) +
+  geom_point() +
+  geom_pointrange()+
+  coord_flip()+
+  theme_bw() +
+labs(title="Margins Plot") + labs(x=("Fit"), y="Donor Democracy Level")
+
+
+
+
+lm(perc_democratic_aid ~ donor_democracy + recipient_democracy + s3un + flow1 , data = mydata)
+
+stargazer(regression,type ="html", out ="file.html")
+
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

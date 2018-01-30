@@ -1,0 +1,327 @@
+---
+title: "p548_final"
+author: "Rafeel Wasif"
+date: "March 14, 2017"
+output: html_document
+---
+
+```{r}
+
+library(dplyr)
+library( rjags )
+
+
+```
+
+
+
+```{r}
+data.ini = c(
+   0, 133, 132, 124, 118, 64.5, 816932,
+   1, 140, 150, 124, -9, 72.5, 1001121,
+   1, 139, 123, 150, 143, 73.3, 1038437,
+   1, 133, 129, 128, 172, 68.8, 965353,
+   0, 137, 132, 134, 147, 65.0, 951545,
+   0, 99, 90, 110, 146, 69.0, 928799,
+   0, 138, 136, 131, 138, 64.5, 991305,
+   0, 92, 90, 98, 175, 66.0, 854258,
+   1, 89, 93, 84, 134, 66.3, 904858,
+   1, 133, 114, 147, 172, 68.8, 955466,
+   0, 132, 129, 124, 118, 64.5, 833868,
+   1, 141, 150, 128, 151, 70.0, 1079549,
+   1, 135, 129, 124, 155, 69.0, 924059,
+   0, 140, 120, 147, 155, 70.5, 856472,
+   0, 96, 100, 90, 146, 66.0, 878897,
+   0, 83, 71, 96, 135, 68.0, 865363,
+   0, 132, 132, 120, 127, 68.5, 852244,
+   1, 100, 96, 102, 178, 73.5, 945088,
+   0, 101, 112, 84, 136, 66.3, 808020,
+   1, 80, 77, 86, 180, 70.0, 889083,
+   1, 83, 83, 86, -9, -9, 892420,
+   1, 97, 107, 84, 186, 76.5, 905940,
+   0, 135, 129, 134, 122, 62.0, 790619,
+   1, 139, 145, 128, 132, 68.0, 955003,
+   0, 91, 86, 102, 114, 63.0, 831772,
+   1, 141, 145, 131, 171, 72.0, 935494,
+   0, 85, 90, 84, 140, 68.0, 798612,
+   1, 103, 96, 110, 187, 77.0, 1062462,
+   0, 77, 83, 72, 106, 63.0, 793549,
+   0, 130, 126, 124, 159, 66.5, 866662,
+   0, 133, 126, 132, 127, 62.5, 857782,
+   1, 144, 145, 137, 191, 67.0, 949589,
+   1, 103, 96, 110, 192, 75.5, 997925,
+   1, 90, 96, 86, 181, 69.0, 879987,
+   0, 83, 90, 81, 143, 66.5, 834344,
+   0, 133, 129, 128, 153, 66.5, 948066,
+   1, 140, 150, 124, 144, 70.5, 949395,
+   0, 88, 86, 94, 139, 64.5, 893983,
+   1, 81, 90, 74, 148, 74.0, 930016,
+   1, 89, 91, 89, 179, 75.5, 935863 )
+
+data.2 = ifelse( data.ini == -9, NA, data.ini )
+
+brain.mat = matrix( data.2, ncol = 7, byrow = T )
+
+dimnames(brain.mat) = list( NULL, 
+         c("code.ini", "fsiq", "viq", "piq", 
+            "weight", "height", "mri.cnt") )
+
+brain.mat = brain.mat[ order(brain.mat[,"code.ini"]), ]
+
+# Create a factor variable for gender.
+gen.char = ifelse(
+                     brain.mat[,"code.ini"] == 0, "female", "male")
+
+gender = factor(gen.char)
+
+gen.code = as.numeric(gender)
+
+brain.fm = data.frame( gender, gen.code, 
+   brain.mat[ , c("fsiq", "viq", "piq", 
+                        "weight", "height", "mri.cnt")] )
+
+
+
+
+
+```
+
+Separating the MALE Data.
+
+```{r}
+m.data <- filter(brain.fm, gender == "male")
+
+
+```
+
+Standardizing the data.
+
+```{r}
+
+m.data$mri.x = m.data$mri.cnt/10000
+
+
+
+```
+
+ScatterPlot
+
+```{r}
+
+plot(m.data$viq ~ m.data$mri.x, main="Scatterplot",
+   xlab="VIQ ", ylab="MRI.X" )
+
+
+
+```
+
+Code for list of data, as well as model.
+
+
+```{r,warning= FALSE, message=FALSE}
+
+setwd("C:/Users/Rafeel/OneDrive/Documents/R-Work/kruschke.r")
+
+getwd()
+attach( "jmfuns.rda", pos = 2)
+
+modelString.2 = "
+# Standardized Variables Analysis:  In this analysis,
+# the predictor and predicted variables are 
+# transformed to z-scores.
+# ---------------------------------------------------
+# DATA TRANSFORMATION:  Standardize the data:
+data {
+   Ntotal <- length(y)
+   xm <- mean(x)
+   ym <- mean(y)
+   xsd <- sd(x)
+   ysd <- sd(y) 
+   for ( i in 1:length(y) ) {
+      zx[i] <- ( x[i] - xm ) / xsd
+      zy[i] <- ( y[i] - ym ) / ysd
+   }
+}
+# -------------------------------
+
+# Specify the model for standardized variables:
+
+model {
+
+# Likelihood Function (non-central t):
+ 
+   for ( i in 1:Ntotal ) {
+      zy[i] ~ dt( zB0 + zB1 * zx[i] , 1/(zsigma^2), nu)
+   }
+
+   # Priors vague on the standardized scale:
+
+   zB0         ~ dnorm( 0 , 1/(10)^2 )   
+   zB1         ~ dnorm( 0 , 1/(10)^2 )
+
+   zsigma      ~ dunif( 1.0E-3 , 1.0E+3 )
+
+   nuMinusOne  ~ dexp(1/29.0)
+   nu         <- nuMinusOne+1
+
+   # Transform to original scale:
+   B1 <- zB1 * ysd / xsd   
+   B0 <- zB0 * ysd   + ym - zB1 * xm * ysd / xsd 
+
+   sigma <- zsigma * ysd
+
+}  # close bracket for model syntax
+
+" # close quote for modelString.2
+
+# Write out modelString.2 to a text file
+
+writeLines( modelString.2 , con="regr.std.txt" )
+
+# =============================================================== ====
+
+# Table 11.  Specify settings for the JAGS run on the             ----
+# standardized variables regression                               ----
+
+# Specify the data in a list, for later shipment to JAGS:
+
+dataStdVars = list(
+x = m.data$mri.x, 
+y = m.data$viq)
+
+length(m.data$mri.x) == length(brain.fm$viq)
+parameters = c(   "B0",  "B1",  "sigma", 
+               "zB0", "zB1", "zsigma", "nu" )
+
+adaptSteps = 1000  # Number of adaptation steps
+
+burnInSteps = 1000
+
+numSavedSteps = 50000
+
+nChains = 2 
+
+thinSteps = 1
+
+nIter = ceiling((numSavedSteps*thinSteps) / nChains)
+#     = 12500
+
+# =============================================================== ====
+
+# Table 12.  Use JAGS to compute the Bayesian linear regression   ----
+# for the standardized variables                                  ----
+
+stdVars.mod = jags.model(
+               file     = "regr.std.txt",
+               data     = dataStdVars, 
+               n.chains = nChains,
+               n.adapt  = adaptSteps,
+               )
+
+{cat( "Burning in the MCMC chain...\n" )
+update( stdVars.mod, n.iter = burnInSteps )  }
+
+{cat( "Sampling final MCMC chain(s) ...\n" )
+mcmcCoda = coda.samples( 
+                  model  = stdVars.mod, 
+                  var    = parameters, 
+                  n.iter = nIter, 
+                  thin   = thinSteps )  }
+
+
+```
+# =============================================================== ====
+
+
+
+Results for the Regression. We can say that the slope B[1] is not negligible as more than 95% values like outside the -0.05 and 0.05 region.
+
+```{r}
+
+mcmccoda.mat.reg <- as.matrix(mcmcCoda)
+mcmccoda.df.reg <- as.data.frame(mcmccoda.mat.reg)
+
+# Finding values of B[1] between -0.05 and 0.05.
+
+res.param(mcmccoda.df.reg$B1, ROPE =  c(-0.05, 0.05 )) 
+
+
+# For Finding the values of B[1] that lie beyond 0.05. 
+length( which( mcmccoda.df.reg$B1 > 0.05))/length(mcmccoda.df.reg$`b[1]`) * 100
+length( which( mcmccoda.df.reg$B1 < 0.05))/length(mcmccoda.df.reg$`b[1]`) * 100
+
+
+
+```
+
+Q2
+
+
+```
+```{r}
+str(mcmcCoda)
+mcmcCoda.matrix <- as.matrix(mcmcCoda)
+
+summary(mcmcCoda)
+
+```
+
+
+
+
+
+
+```
+23% of the difference values lie between -2 and 2 rope difference.
+
+```{r}
+setwd("C:/Users/Rafeel/OneDrive/Documents/R-Work/kruschke.r")
+
+
+#graphics.off() # This closes all of R's graphics windows.
+#rm(list=ls())  # Careful! This clears all of R's memory!
+#------------------------------------------------------------------------------- 
+
+myDataFrame = brain.fm
+yName="viq" 
+xName="gen.code" 
+# Load the relevant model into R's working memory:
+setwd("C:/Users/Rafeel/OneDrive/Documents/R-Work/kruschke.r")
+
+source("Jags-Ymet-Xnom1fac-MnormalHom.R")
+#------------------------------------------------------------------------------- 
+# Generate the MCMC chain:
+mcmcCoda = genMCMC( datFrm=myDataFrame , yName=yName , xName=xName ,
+                    numSavedSteps=11000 , thinSteps=10)  #saveName=fileNameRoot )
+
+summary(mcmcCoda)
+
+
+```
+
+24% values of dif lie between -2 and 2. 15% lie above 2 and 60% values lie below -2.
+
+
+
+```{r}
+# For Finding the values of B[1] that lie beyond 0.05. 
+
+
+mcmccoda.mat <- as.matrix(mcmcCoda)
+mcmccoda.df <- as.data.frame(mcmccoda.mat)
+dif = mcmccoda.df$`m[1]` - mcmccoda.df$`m[2]`
+
+# Rope between -2 and 2.
+
+res.param(dif, ROPE =  c(-2, 2 )) 
+
+
+
+# Rope less than -2 and greater than 2.
+length( which( dif > 2))/length(dif) * 100
+length( which( dif < -2))/length(dif) * 100
+
+
+
+```
+

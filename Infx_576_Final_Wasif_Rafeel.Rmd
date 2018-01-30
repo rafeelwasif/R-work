@@ -1,0 +1,346 @@
+---
+title: "Infx_576_Final"
+author: "Rafeel Wasif"
+date: "Wednesday, June 03, 2015"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r, warning=FALSE, error=FALSE,message=FALSE}
+#Loading Exam Data
+exam_data <- load("exam_data.Rdata")
+library(statnet)
+library(sna)
+library(ggplot2)
+library("statnet.common", lib.loc="~/R/win-library/3.1")
+library(dplyr)
+```
+Problem Set 1
+
+Component Size varies across the different definitions of connectivity. For strong connectivity, almost component sizes are 1 with only 2 component sizes 2.For weak connectivity, there is an outlier of component size 47. However, other component sizes are either 1 or 2. . Similarly, for unilateral, there is a lot of variation. Only 5 have component size 1 while different components have component size of 5 and 6.For recursive, the component size are also mostly 1 with some 2s.This shows that there is considerable variation between our definitions of connectivity. Most component sizes are 1. However, there is an outlier componenent size of 47 in weak connectivity. There is most variation in component size in the unilateral connectivity.
+
+
+
+```{r, echo=FALSE}
+
+#Using different definitions of connectivity and finding the component distribution.
+
+strong <- component.dist(mids_1993, connected="strong")
+weak <- component.dist(mids_1993, connected="weak")
+unilateral <- component.dist(mids_1993, connected="unilateral")
+recursive <- component.dist(mids_1993, connected="recursive")
+
+
+
+#Plotting the component size of various connectivity definitions
+
+hist(strong$csize, xlab="Component Size", main="Strong",col="blue")
+hist(weak$csize, xlab="Component Size", main="weak",col="blue")
+hist(unilateral$csize, xlab="Component Size", main="Unilateral",col="blue")
+hist(recursive$csize, xlab="Component Size", main="Recursive",col="blue")
+
+```
+
+Nations with State Number 1   5  36  38  41  59  60  61  68  74  76 134 135 136 155 158
+are involved in bicomponents.In a MID network, we are looking at dispute between countries, and the impact if one of the vertices is removed. This is showing how the removal of one country would continue or stop the dispute. In case of aid, if we are looking at bi-components, we would be looking at the countries who connect each other with aid. Our focus will be on looking at countries whose removal does not lead to removal of the overall aid structure.
+
+```{r}
+
+#Taking the bicomponent distribution of mids_1993 data.
+
+bicomponent_dist <- bicomponent.dist(mids_1993,symmetrize = "weak")
+
+#Creating a mem_vector with the same size as mids_1993 data. This is done to basically allow it to be incorporated as an attribute into the mids_1993 data.
+
+mem_vector <- rep(F,length= 186)
+mem_vector[bicomponent_dist$members[[1]]] <- T
+
+# Creating different colors which could be used to identify bicomponent countries from others.
+
+vector_black <- rep("black", 186)
+vector_black[bicomponent_dist$members[[1]]] <- "red"
+
+mem_vector <- rep(F,length= 186)
+mem_vector[bicomponent_dist$members[[1]]] <- T
+
+#Creating a new vertex attribute.
+
+set.vertex.attribute(mids_1993,"bicomponent", mem_vector)
+
+
+
+set.vertex.attribute(mids_1993,"bicomponent", mem_vector)
+
+# Plotting the mids_1993 data with vector_black vector to separate the bicomponents from no-n-bicomponents in the visualization.
+
+gplot(mids_1993, vertex.col = vector_black)
+
+
+
+#mids_1993%v%"bicomponent"
+#mem_vector <- rep(F,length= 186)
+#mem_vector[bicomponent_dist$members[[1]]] <- T
+
+```
+States 1,41, 59, 90, 158, 159, and 161 are the cutpoints in the alliances network. No cut points exist in the Militarized Interstate dispute network. This shows that countries that are cut points in the alliances are choke points in the flow of information, material, or influence. These countries can potentially makes sure that the alliance continues to exist, or whether it dissolves..
+```{r}
+
+#Finding cut point for MID network.
+ct_mds <- cutpoints(mids_1993)
+
+
+#Finding Cut point for Alliances Network.
+
+ct_alliances <- cutpoints(alliances_1993)
+summary(ct_alliances)
+
+
+
+```
+
+
+
+There is a positive correlation of 0.213342 between the cut point in the alliance and the degrees in the Militarizes Interstate dispute. It is significant, with a very low p-value. We should expect this to occur because the cut points in alliances are more likely to be countries that are involved in a lot of interactions with other states because of their strategic locations.Similarly, countries that have been involved in a lot of disputes are more likely to look for alliances because they would want to have more friends.  
+
+```{r}
+
+#Creating Vector of cut point alliances with the same size as MIDs.
+
+vector_ct_length <- rep (0,  186)
+vector_ct_length[ct_alliances] <- 1
+
+
+#Testing the correlation whether cut point in the alliance network leads to more degrees in the Militarized Interstate Dispute. 
+
+cor.test(vector_ct_length,degree_mids)
+```
+
+Problem Set 2
+
+This shows that in terms of dyad census there are 12 mutual, 49 asymetric and 110 Null dyads. This means that in  12 dyads the position of dominance has been shown by both children i and j. In 49 dyads only one child was dominant while the other child was not. 110 times there was not dominant instances dyads.
+
+As far as triads are concerned, there were great variation in the kinds of relationship. However, the most common were 012. This means that A and B components of the triads were linked to each other, while A and C and B and C were not connected to each other. However, in the relation A and B, A was dominant against B and it was not mutual. In real terms, this means that students in this triad only student A was dominant against B. However, there was not dominant relationship between a child A and C in the triad. This means that there is only one dominant relationship in the largest number(355) of triads. These relationships show that combined with both dyad and triad census, most relationships in the data were those in which only one child was dominant. This means that in a lot of these relationships only one child had the upper-hand.  
+
+
+```{r}
+# Conducting the Dyad and Triad Census.
+
+dyad.census(predom)
+triad.census(predom)
+
+
+```
+B. The graph density of the predom graph (0.2134503) is very similar to the mean of the density of  random graphs genereated with the same number of possible dyads (0.2152047).
+This shows that overall the predom graph is not very different in density when compared to a random graph with the same dyadic properties.
+
+```{r}
+#Calculating the total number of possible dyads
+12+49+110
+
+#Generating random graphs with similar number of mutual, assymetric and null dyads as predom.
+
+random_graph <- rguman(20, 19, mut = 12/171, asym = 49/171, null = 110/171, 
+    method = c("probability", "exact"), return.as.edgelist = FALSE)
+
+#Comparing and generating graph density of both random graph and predom.
+
+gden(predom)
+random_graph_mean <- mean(gden (random_graph))
+random_graph_mean
+```
+The edgewise reciprocity of the graph is less than the size and density conditioned uniform graph. However, the difference is not very substantial (-0.02056547). This shows that the prdeo graph contains less mutual reciprocal dyads than is expected from a random graph with similar properties.
+
+```{r}
+#Calculating reciprocity of predom and comparing it to the reciprocity of a random graph.
+
+grecip(predom, g = NULL, measure ="edgewise.lrr")
+recip_random <- grecip(random_graph, g = NULL, measure ="edgewise.lrr")
+grecip(predom, g = NULL, measure ="edgewise.lrr") - mean(recip_random)
+
+```
+The predom graph has more transitive dyads than that expected in a random graphy by a substantial margin (0.2207123). This shows that the predom graph has substantially higher number of transitive dyads than that expected in a random graph.
+
+
+```{r}
+
+#Calculating transitivity of predom and comparing it to the transitivity of a random graph.
+
+gtrans(predom)
+trans_rand <- gtrans(random_graph)
+mean(trans_rand)
+gtrans(predom) - mean(trans_rand)
+```
+
+The mean of the triad census for predom is exactly same as the triad census of the random graph generated. This shows that the cyclicity of predom is exactly the same as what we would expect from a random graph.
+
+```{r}
+
+mean(triad.census(predom))
+triad.classify(predom)     
+mean(triad.census(random_graph))
+triad.classify(random_graph)
+
+```
+Problem Set 3
+
+```{r}
+
+#Exploring Data
+
+SanJuanSurVisiting%v%"leaders"
+SanJuanSurVisiting%v%"status"
+
+
+
+```
+
+
+
+```{r}
+
+#Making a Permutation tests' Formula
+
+perm.cor.test<-function(x,y,niter=5000){  #Define a simple test function
+  c.obs <- cor(x,y,use="complete.obs")
+  c.rep <- vector()
+  for(i in 1:niter)
+    c.rep[i] <- cor(x,sample(y),use="complete.obs")
+  cat("Vector Permutation Test:\n\tObserved correlation: ",c.obs,"\tReplicate quantiles (niter=",niter,")\n",sep="")
+  cat("\t\tPr(rho>=obs):",mean(c.rep>=c.obs),"\n")
+  cat("\t\tPr(rho<=obs):",mean(c.rep<=c.obs),"\n")
+  cat("\t\tPr(|rho|>=|obs|):",mean(abs(c.rep)>=abs(c.obs)),"\n")
+  invisible(list(obs=c.obs,rep=c.rep))
+}
+
+
+
+```
+
+We find that there is no significant relationship between households' status and their core positiosns. This shows that households with leaders are less likely to be peripheral than households without leadres.
+
+
+
+
+```{r}
+
+
+
+#Running a permutation correlation test on leaders and their core position.
+
+perm.cor.test(kcores(SanJuanSurVisiting),SanJuanSurVisiting%v%"leaders")
+
+```
+There is a much stronger correlation between the indegrees and status, as compared to outdegree and status.The relationship between indegree and status is also significant, while outdegree is not. This shows that the households with stronger status are more likely to receive guests than they are likely to send guests.
+
+
+```{r}
+
+#Testing the correlation between the amount of visitors a family receives and their status.
+
+ideg <- degree(SanJuanSurVisiting, cmode="indegree")     # Indegree for SanJuanSurVisiting
+odeg <- degree(SanJuanSurVisiting, cmode="outdegree")    # Outdegree for SanJuanSurVisiting
+
+
+perm.cor.test(ideg,SanJuanSurVisiting%v%"status")
+perm.cor.test(SanJuanSurVisiting%v%"status",odeg)
+
+
+```
+There is a negative correlation between status and betweenness. The relationship is also not significant. This shows that the higher the household status, the less likely they are to vist each other. Therefore, evidence does not support this hypothesis.
+
+```{r}
+#Testing whether households with higher status visit each other more.
+
+between <-betweenness(SanJuanSurVisiting)     # Betweenness score of SanJuarVisiting
+perm.cor.test(SanJuanSurVisiting%v%"grouping",between)
+
+
+
+```
+There is a positive correlation between status and the visitors sends. However, the relationship is not significant. This does not support the hypothesis familieis tend to marginally send more visitiors to households with higher status than their own.
+
+```{r}
+
+
+#Testing whether marginally, families tend to send visitors to households with higher status than their own.
+perm.cor.test(SanJuanSurVisiting%v%"status",odeg)
+
+```
+There is a positive correlation between family status and their relationships. This relationship is significant.This supports the hypothesis that high status families are more likely to be mutual in relationships.
+
+```{r}
+# Testing whether relationships among high-status households are more likely to be mutual in relationships
+
+
+perm.cor.test(SanJuanSurVisiting%v%"status",SanJuanSurVisiting%v%"grouping")
+
+
+
+
+```
+Problem Set 4
+
+For an undirected graph of order 7, maximum number of lines = 21
+
+Density = l/(n(n-1))/2, therefore possible densities = (1/21, 2/21, 3/21, 4/21, 5/21, 6/21)
+
+ For various densities, possible graph numbers = (6,15, 10,6, 3,1)
+ We manually calculated the number of possible graphs with a certain number of edges: 
+ e.g for 2 edges, number of graphs = (6*5/2), 3-edges number of graphs = (5*4/2), 
+4-edges - (4*3)/2, 5-edges = (3*2)/2, 6-edges = (2*1)/1
+
+We find that the number of possible graphs initially increase from 6 to 15 with graph density from 1/21 to 2/21. However, after the the number of possible graphs keeps decreasing until it becomes 1 with highest possible density in the graph with no loops of 6/21.
+
+
+
+```{r}
+#Making Variables Graph_Density and Graph Numbers(the number of possible graphs genereated for each possible density level).
+
+Graph_Density = (c(1/21, 2/21, 3/21, 4/21, 5/21, 6/21))
+Graph_Number = (c(6,15,10,6,3,1))
+Density_df = data.frame(Graph_Density, Graph_Number)
+
+#Plotting my Graph Density with the possible number of graphs at each possible density level.
+
+ggplot() + geom_point(data = Density_df, aes(x=Graph_Density, y= Graph_Number))+ labs(title="Number of Graphs") + labs(x=("Graph Density"), y="Number of Possible Graphs")
+
+
+
+```{r}
+
+```
+
+Problem Set 5
+
+
+```{r}
+
+
+#Visualizing the Data
+summary(fgf)
+gplot(fgf, vertex.col = fgf%v%"gender")
+
+#Fitting Ergm model with gender as the node covariate
+ergm_model <-ergm(fgf~edges + nodecov("gender"))
+
+#Trying to run mcmc diagnostic. Attempt failed
+# mcmc.diagnostics(ergm_model)
+# mcmc.diagnostics(ergm_model,center=FALSE)
+
+
+```
+
+Problem Set 6
+Model = k x n x 1 x (k x k) 
+
+k: a scalar value denoting the number of groups or modules in the network
+◦ −
+→
+z : a n × 1 vector where zi gives the group index of vertex i
+◦ M: a k × k stochastic block matrix, where Mij gives the probability that a vertex of type i is connected to a vertex of type j
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
