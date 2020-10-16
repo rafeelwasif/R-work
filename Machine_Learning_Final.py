@@ -30,10 +30,6 @@ with open("H:/Machine_Learning_Islamic_NGOs/data_muslims.csv", encoding="utf8", 
     df = pd.DataFrame(csv_reader, columns = colnames)
     df.head() 
 
-    
-    
-   
-#Another One
 #pre-processing
 import re 
 def clean_str(string):
